@@ -16,6 +16,7 @@
 <resources>
 
     <color name="default_background">#fafafa</color>
+    <color name="accent">@*android:color/accent_material_light</color>
 
     <!-- configuration for album set page -->
     <color name="albumset_background">#fafafa</color>
@@ -78,7 +79,7 @@
     <color name="lowlight">#650101</color>
     <color name="grey">#e7e7e7</color>
     <color name="disabled_knob">#575757</color>
-    <color name="toolbar_theme">#e53935</color>
+    <color name="toolbar_theme">@color/accent</color>
     <color name="multiselect_background">#ffffff</color>
     <color name="edit_background">#212121</color>
     <color name="edit_actionbar_background">#8A000000</color>
