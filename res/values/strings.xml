@@ -1173,7 +1173,7 @@ CHAR LIMIT = NONE] -->
         <item>@string/videos_title</item>
     </string-array>
 
-    <string name="navigation_drawer_title" translatable="false">@string/app_name</string>
+    <string name="navigation_drawer_title" translatable="false"></string>
     <!-- Timeline screen title -->
     <string name="timeline_title">Timeline</string>
     <!-- Albums screen title -->
