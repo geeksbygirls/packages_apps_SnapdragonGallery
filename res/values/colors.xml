@@ -14,35 +14,49 @@
      limitations under the License.
 -->
 <resources>
-
-    <color name="default_background">#fafafa</color>
+    <!-- main colors -->
+    <color name="primary">@*android:color/primary_material_settings</color>
+    <color name="secondary">@*android:color/secondary_material_settings</color>
     <color name="accent">@*android:color/accent_material_light</color>
 
+    <!-- background colors -->
+    <color name="default_background">@color/background_dark</color>
+    <color name="background_dark">@*android:color/background_material_dark</color>
+    <color name="background_light">@*android:color/background_material_light</color>
+
+    <!-- dark text -->
+    <color name="primaryTextLight">@*android:color/primary_text_default_material_light</color>
+    <color name="secondaryTextLight">@*android:color/secondary_text_default_material_light</color>
+    <!-- light text -->
+    <color name="primaryTextDark">@*android:color/primary_text_default_material_dark</color>
+    <color name="secondaryTextDark">@*android:color/secondary_text_default_material_dark</color>
+
+
     <!-- configuration for album set page -->
-    <color name="albumset_background">#fafafa</color>
-    <color name="albumset_placeholder">#75000000</color>
+    <color name="albumset_background">@color/default_background</color>
+    <color name="albumset_placeholder">@color/primary</color>
     <color name="albumset_label_background">#8A000000</color> <!-- 54% alpha -->
-    <color name="albumset_label_title">#FFFFFF</color>
-    <color name="albumset_label_count">#FFFFFF</color>
+    <color name="albumset_label_title">@color/secondaryTextDark</color>
+    <color name="albumset_label_count">@color/primaryTextDark</color>
     <color name="albumlist_label_title">#8E000000</color>
 
     <!-- configuration for album page -->
-    <color name="album_background">#fafafa</color>
-    <color name="album_placeholder">#75000000</color>
+    <color name="album_background">@color/default_background</color>
+    <color name="album_placeholder">@color/primary</color>
 
     <!-- configuration for photo page -->
-    <color name="photo_background">#1A1A1A</color>
+    <color name="photo_background">@color/default_background</color>
     <color name="photo_placeholder">#333</color>
     <color name="photo_page_action_bar">#8A000000</color>
     <color name="photo_page_bottom_panel">#8A000000</color>
 
     <!-- configuration for manage cache page -->
-    <color name="cache_background">#1A1A1A</color>
+    <color name="cache_background">@color/default_background</color>
     <color name="cache_placeholder">#333</color>
 
     <color name="bitmap_screennail_placeholder">#333</color>
 
-    <color name="slideshow_background">#1A1A1A</color>
+    <color name="slideshow_background">@color/default_background</color>
 
     <color name="button_dark_transparent_background">#6000</color>
 
@@ -80,11 +94,11 @@
     <color name="grey">#e7e7e7</color>
     <color name="disabled_knob">#575757</color>
     <color name="toolbar_theme">@color/accent</color>
-    <color name="multiselect_background">#ffffff</color>
-    <color name="edit_background">#212121</color>
-    <color name="edit_actionbar_background">#8A000000</color>
-    <color name="dialog_button_color">#009688</color>
-    <color name="timeline_title_text_color">#8A000000</color>
-    <color name="timeline_title_number_text_color">#42000000</color>
-    <color name="timeline_title_background_color">#fafafa</color>
+    <color name="multiselect_background">@color/default_background</color>
+    <color name="edit_background">@color/default_background</color>
+    <color name="edit_actionbar_background">@color/accent</color>
+    <color name="dialog_button_color">@color/accent</color>
+    <color name="timeline_title_text_color">@color/primaryTextDark</color>
+    <color name="timeline_title_number_text_color">@color/secondaryTextDark</color>
+    <color name="timeline_title_background_color">@color/secondary</color>
 </resources>
