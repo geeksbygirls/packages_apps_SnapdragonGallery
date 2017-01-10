@@ -486,4 +486,9 @@
         <item>@string/pref_camera_countdown_label_fifteen</item>
     </string-array>
 
+    <string-array name="wallpaper_type_list">
+        <item>@string/wallpaper_type_both</item>
+        <item>@string/wallpaper_type_system</item>
+        <item>@string/wallpaper_type_lock</item>
+    </string-array>
 </resources>

@@ -33,6 +33,7 @@ import android.view.Display;
 import com.android.gallery3d.common.ApiHelper;
 import com.android.gallery3d.filtershow.crop.CropActivity;
 import com.android.gallery3d.filtershow.crop.CropExtras;
+
 import org.codeaurora.gallery.R;
 
 import java.lang.IllegalArgumentException;

@@ -1199,4 +1199,8 @@ CHAR LIMIT = NONE] -->
     <string name="trim_video_exit_title">Discard changes?</string>
     <string name="trim_video_exit_msg">Discard the changes made to this video?</string>
     <string name="trim_video_exit_discard">DISCARD</string>
+    <string name="wallpaper_type_dialog_title">Set wallpaper</string>
+    <string name="wallpaper_type_both">Home screen and lock screen</string>
+    <string name="wallpaper_type_system">Home screen</string>
+    <string name="wallpaper_type_lock">Lock screen</string>
 </resources>

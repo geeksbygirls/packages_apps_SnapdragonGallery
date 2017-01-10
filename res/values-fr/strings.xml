@@ -432,6 +432,10 @@
     <string name="tab_albums" msgid="8079449907770685691">"Albums"</string>
     <string name="camera_menu_more_label" msgid="6868642182125198710">"PLUS D\'OPTIONS"</string>
     <string name="camera_menu_settings_label" msgid="875454962069404723">"PARAMÈTRES"</string>
+    <string name="wallpaper_type_dialog_title">Définir wallpaper</string>
+    <string name="wallpaper_type_both">Les deux</string>
+    <string name="wallpaper_type_system">Ecran d\'accueil</string>
+    <string name="wallpaper_type_lock">Ecran de vérrouillage</string>
   <plurals name="number_of_photos">
     <item quantity="one" msgid="6949174783125614798">"%1$d photo"</item>
     <item quantity="other" msgid="3813306834113858135">"%1$d photos"</item>
