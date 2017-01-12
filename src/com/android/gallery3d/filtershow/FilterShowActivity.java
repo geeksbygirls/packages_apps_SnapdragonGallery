@@ -56,6 +56,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.provider.Settings;
+import android.os.Message;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
@@ -74,6 +75,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnTouchListener;
+import android.view.ViewGroup;
 import android.view.ViewPropertyAnimator;
 import android.view.Window;
 import android.view.WindowManager;
@@ -93,12 +95,15 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import org.codeaurora.gallery.R;
+import org.json.JSONObject;
+
 import com.android.gallery3d.app.PhotoPage;
 import com.android.gallery3d.common.Utils;
 import com.android.gallery3d.data.LocalAlbum;
 import com.android.gallery3d.filtershow.cache.ImageLoader;
 import com.android.gallery3d.filtershow.category.Action;
 import com.android.gallery3d.filtershow.category.CategoryAdapter;
+import com.android.gallery3d.filtershow.category.CategoryPanelLevelTwo;
 import com.android.gallery3d.filtershow.category.CategoryView;
 import com.android.gallery3d.filtershow.category.EditorCropPanel;
 import com.android.gallery3d.filtershow.category.MainPanel;
@@ -109,6 +114,7 @@ import com.android.gallery3d.filtershow.category.TrueScannerPanel;
 import com.android.gallery3d.filtershow.data.FilterPresetDBHelper;
 import com.android.gallery3d.filtershow.data.FilterPresetSource;
 import com.android.gallery3d.filtershow.data.FilterPresetSource.SaveOption;
+import com.android.gallery3d.filtershow.category.WaterMarkView;
 import com.android.gallery3d.filtershow.data.UserPresetsManager;
 import com.android.gallery3d.filtershow.editors.Editor;
 import com.android.gallery3d.filtershow.editors.EditorCrop;
@@ -132,8 +138,10 @@ import com.android.gallery3d.filtershow.filters.FilterPresetRepresentation;
 import com.android.gallery3d.filtershow.filters.FilterRepresentation;
 import com.android.gallery3d.filtershow.filters.FilterRotateRepresentation;
 import com.android.gallery3d.filtershow.filters.FilterUserPresetRepresentation;
+import com.android.gallery3d.filtershow.filters.FilterWatermarkRepresentation;
 import com.android.gallery3d.filtershow.filters.FiltersManager;
 import com.android.gallery3d.filtershow.filters.ImageFilter;
+import com.android.gallery3d.filtershow.filters.SaveWaterMark;
 import com.android.gallery3d.filtershow.filters.SimpleMakeupImageFilter;
 import com.android.gallery3d.filtershow.history.HistoryItem;
 import com.android.gallery3d.filtershow.history.HistoryManager;
@@ -141,6 +149,7 @@ import com.android.gallery3d.filtershow.imageshow.ImageShow;
 import com.android.gallery3d.filtershow.imageshow.MasterImage;
 import com.android.gallery3d.filtershow.imageshow.Spline;
 import com.android.gallery3d.filtershow.info.InfoPanel;
+import com.android.gallery3d.filtershow.mediapicker.MediaPickerFragment;
 import com.android.gallery3d.filtershow.pipeline.CachingPipeline;
 import com.android.gallery3d.filtershow.pipeline.ImagePreset;
 import com.android.gallery3d.filtershow.pipeline.ProcessingService;
@@ -186,9 +195,10 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
     private EditorPlaceHolder mEditorPlaceHolder = new EditorPlaceHolder(this);
     private Editor mCurrentEditor = null;
 
+    private MediaPickerFragment mMediaPicker;
+
     private static final int SELECT_PICTURE = 1;
     public static final int SELECT_FUSION_UNDERLAY = 2;
-    public static final int SELECT_FILTER = 3;
     private static final String LOGTAG = "FilterShowActivity";
 
     private boolean mShowingTinyPlanet = false;
@@ -231,6 +241,7 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
     private CategoryAdapter mCategoryDualCamAdapter = null;
     private CategoryAdapter mCategoryTruePortraitAdapter = null;
     private CategoryAdapter mCategoryFilterPresetAdapter = null;
+    private ArrayList<CategoryAdapter> mCategoryWatermarkAdapters;
     private int mCurrentPanel = MainPanel.LOOKS;
     private Vector<FilterUserPresetRepresentation> mVersions =
             new Vector<FilterUserPresetRepresentation>();
@@ -258,6 +269,24 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
 
     private ProgressDialog mLoadingDialog;
     private long mRequestId = -1;
+    private WaterMarkView mWaterMarkView;
+    private boolean hasWaterMark;
+    private String locationStr;
+    private String temperature;
+    protected Handler handler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case SaveWaterMark.MARK_SAVE_COMPLETE:
+                    completeSaveImage((Uri) msg.obj, true);
+                    break;
+                default:
+                    break;
+            }
+            super.handleMessage(msg);
+        }
+    };
+    private SaveWaterMark mSaveWaterMark = new SaveWaterMark();
 
     private DialogFragment mPresetDialog;
     private FilterPresetSource mFilterPresetSource;
@@ -422,6 +451,10 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
             showActionBar(false);
         }
 
+        if (representation.getFilterType() == FilterRepresentation.TYPE_WATERMARK_CATEGORY) {
+            loadWaterMarkPanel((FilterWatermarkRepresentation) representation);
+        }
+
         if (currentId == ImageOnlyEditor.ID) {
             mCurrentEditor.reflectCurrentFilter();
             return;
@@ -542,6 +575,30 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
         }.run();
     }
 
+    private void loadWaterMarkPanel(final FilterWatermarkRepresentation representation) {
+        new Runnable() {
+            @Override
+            public void run() {
+                CategoryPanelLevelTwo panel = new CategoryPanelLevelTwo(representation.getAdapterId());
+                FragmentTransaction transaction =
+                        getSupportFragmentManager().beginTransaction();
+                transaction.remove(getSupportFragmentManager().findFragmentByTag(
+                        MainPanel.FRAGMENT_TAG));
+                transaction.replace(R.id.main_panel_container, panel,
+                        MainPanel.FRAGMENT_TAG);
+                transaction.commitAllowingStateLoss();
+            }
+        }.run();
+    }
+
+    public void setLocation(String location) {
+        locationStr = location;
+    }
+
+    public void setTemperature(String temperature) {
+        this.temperature = temperature;
+    }
+
     public void leaveSeekBarPanel() {
         removeSeekBarPanel();
         showDefaultImageView();
@@ -600,12 +657,18 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
                 if (action == MotionEvent.ACTION_DOWN) {
                     MasterImage.getImage().setShowsOriginal(true);
                     v.setPressed(true);
+                    if (mWaterMarkView != null) {
+                        mWaterMarkView.setVisibility(View.GONE);
+                    }
                 }
                 if (action == MotionEvent.ACTION_UP
                         || action == MotionEvent.ACTION_CANCEL
                         || action == MotionEvent.ACTION_OUTSIDE) {
                     v.setPressed(false);
                     MasterImage.getImage().setShowsOriginal(false);
+                    if (mWaterMarkView != null) {
+                        mWaterMarkView.setVisibility(View.VISIBLE);
+                    }
                 }
 
                 return false;
@@ -738,6 +801,7 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
             masterImage.setScaleFactor(1);
             masterImage.resetTranslation();
         }
+        clearWaterMark();
     }
 
     public void adjustCompareButton(boolean scaled) {
@@ -767,6 +831,7 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
         fillMakeup();
         fillDualCamera();
         fillTruePortrait();
+        fillWaterMarks();
     }
 
     public void setupStatePanel() {
@@ -1126,6 +1191,27 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
         }
     }
 
+    private void fillWaterMarks() {
+        FiltersManager filtersManager = FiltersManager.getManager();
+        ArrayList<ArrayList<FilterRepresentation>> filters = new ArrayList<>();
+        filters.add(filtersManager.getWaterMarks());
+        filters.add(filtersManager.getLocations());
+        filters.add(filtersManager.getTimes());
+        filters.add(filtersManager.getWeathers());
+        filters.add(filtersManager.getEmotions());
+        filters.add(filtersManager.getFoods());
+        if (mCategoryWatermarkAdapters != null) {
+            mCategoryWatermarkAdapters.clear();
+        }
+        mCategoryWatermarkAdapters = new ArrayList<>();
+        for (int i = 0; i < filters.size(); i++) {
+            mCategoryWatermarkAdapters.add(new CategoryAdapter(this));
+            for (FilterRepresentation representation : filters.get(i)) {
+                mCategoryWatermarkAdapters.get(i).add(new Action(this, representation));
+            }
+        }
+    }
+
     private void processIntent() {
         Intent intent = getIntent();
         if (intent.getBooleanExtra(LAUNCH_FULLSCREEN, false)) {
@@ -1257,6 +1343,30 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
         return mCategoryTruePortraitAdapter;
     }
 
+    public CategoryAdapter getCategoryWatermarkAdapter() {
+        return mCategoryWatermarkAdapters.get(0);
+    }
+
+    public CategoryAdapter getCategoryLocationAdapter() {
+        return mCategoryWatermarkAdapters.get(1);
+    }
+
+    public CategoryAdapter getCategoryTimeAdapter() {
+        return mCategoryWatermarkAdapters.get(2);
+    }
+
+    public CategoryAdapter getCategoryWeatherAdapter() {
+        return mCategoryWatermarkAdapters.get(3);
+    }
+
+    public CategoryAdapter getCategoryEmotionAdapter() {
+        return mCategoryWatermarkAdapters.get(4);
+    }
+
+    public CategoryAdapter getCategoryFoodAdapter() {
+        return mCategoryWatermarkAdapters.get(5);
+    }
+
     public void removeFilterRepresentation(FilterRepresentation filterRepresentation) {
         if (filterRepresentation == null) {
             return;
@@ -1278,6 +1388,9 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
         if (!(filterRepresentation instanceof FilterRotateRepresentation)
                 && !(filterRepresentation instanceof FilterMirrorRepresentation)
                 && MasterImage.getImage().getCurrentFilterRepresentation() == filterRepresentation) {
+            return;
+        }
+        if (filterRepresentation.getFilterType() == FilterWatermarkRepresentation.TYPE_WATERMARK_CATEGORY) {
             return;
         }
         if (filterRepresentation instanceof FilterUserPresetRepresentation
@@ -1370,9 +1483,58 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
                 ((FilterDualCamSketchRepresentation)representation).setPoint((int)mTmpPoint[0],(int)mTmpPoint[1]);
             }
         }
+        if (representation.getFilterType() == FilterRepresentation.TYPE_WATERMARK) {
+            showWaterMark(representation);
+        }
         useFilterRepresentation(representation);
 
         loadEditorPanel(representation);
+    }
+
+    private void showWaterMark(FilterRepresentation representation) {
+        FilterWatermarkRepresentation watermarkRepresentation =
+                (FilterWatermarkRepresentation)representation;
+        if (mWaterMarkView != null) {
+            rlImageContainer.removeView(mWaterMarkView);
+            hasWaterMark = false;
+        }
+        RelativeLayout.LayoutParams params =
+                new RelativeLayout.LayoutParams(mImageShow.getImageShowWidth(),
+                        mImageShow.getImageShowHeight());
+        String textHint;
+        switch (watermarkRepresentation.getMarkType()) {
+            case 0:
+                textHint = locationStr;
+                break;
+            case 2:
+                textHint = temperature;
+                break;
+            default:
+                textHint = watermarkRepresentation.getTextHint();
+                break;
+        }
+        WaterMarkView waterMarkView = watermarkRepresentation.getWaterMarkView(textHint);
+        rlImageContainer.addView(waterMarkView, params);
+        mWaterMarkView = waterMarkView;
+        mSaveWaterMark.useRepresentation(representation);
+        imgComparison.bringToFront();
+        hasWaterMark = true;
+    }
+
+    private void clearWaterMark() {
+        if (mWaterMarkView != null) {
+            rlImageContainer.removeView(mWaterMarkView);
+            mWaterMarkView = null;
+            hasWaterMark = false;
+        }
+    }
+
+    public boolean isWaterMarked() {
+        return hasWaterMark;
+    }
+
+    public SaveWaterMark getSaveWaterMark() {
+        return mSaveWaterMark;
     }
 
     public Editor getEditor(int editorID) {
@@ -1435,11 +1597,91 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
         mCurrentDialog = null;
     }
 
-    public void onFilterGeneratorLaunched(boolean b) {
-        mPresetDialog = null;
-        if (b == true) {
-            pickImage(SELECT_FILTER);
+    public void onMediaPickerStarted() {
+        toggleComparisonButtonVisibility();
+        ActionBar actionBar = getActionBar();
+        actionBar.hide();
+        if (mMediaPicker == null)
+            mMediaPicker = MediaPickerFragment.newInstance(getApplicationContext());
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.main_panel_container, mMediaPicker)
+                .commit();
+    }
+
+    public void onMediaPickerResult(Uri selImg) {
+        mFilterPresetSource = new FilterPresetSource(this);
+        int id = nameFilter(mFilterPresetSource, tempFilterArray);
+        FilterPresetRepresentation fp= new FilterPresetRepresentation(
+                getString(R.string.filtershow_preset_title) + id, id, id);
+        fp.setSerializationName("Custom");
+        fp.setUri(selImg);
+        ImagePreset preset = new ImagePreset();
+        preset.addFilter(fp);
+        SaveOption sp= new SaveOption();
+        sp._id = id;
+        sp.name = "Custom" + id;
+        sp.Uri = selImg.toString();
+        tempFilterArray.add(sp);
+        FiltersManager.getManager().addRepresentation(fp);
+        mCategoryLooksAdapter.add(new Action(this, fp, Action.FULL_VIEW, true));
+        useFilterRepresentation(fp);
+        int pos = mCategoryLooksAdapter.getPositionOfPresentation(fp);
+        if (pos != -1)
+            backAndSetCustomFilterSelected(pos);
+    }
+
+    private void backAndSetCustomFilterSelected(int pos) {
+        showComparisonButton();
+        removeSeekBarPanel();
+        showActionBar(true);
+        loadMainPanel();
+        if(mEditorPlaceHolder != null)
+            mEditorPlaceHolder.hide();
+        if(mImageShow != null)
+            mImageShow.setVisibility(View.VISIBLE);
+        updateCategories();
+        mCategoryLooksAdapter.setSelected(pos);
+    }
+
+    public void applyCustomFilterRepresentation(
+            FilterRepresentation filterRep, FilterRepresentation oldfilterRep) {
+        ImagePreset oldPreset = MasterImage.getImage().getPreset();
+        ImagePreset copy = new ImagePreset(oldPreset);
+        if (oldfilterRep != null)
+            copy.removeFilter(oldfilterRep);
+
+        FilterRepresentation rep = copy.getRepresentation(filterRep);
+        if (rep == null) {
+            filterRep = filterRep.copy();
+            copy.addFilter(filterRep);
+        } else {
+            if (filterRep.allowsSingleInstanceOnly()) {
+                // Don't just update the filter representation. Centralize the
+                // logic in the addFilter(), such that we can keep "None" as
+                // null.
+                if (!rep.equals(filterRep)) {
+                    // Only do this if the filter isn't the same
+                    // (state panel clicks can lead us here)
+                    copy.removeFilter(rep);
+                    copy.addFilter(filterRep);
+                }
+            }
         }
+        MasterImage.getImage().setPreset(copy, filterRep, false);
+    }
+
+    public FilterRepresentation createUserPresentaion(Uri selImg, int index) {
+        FilterPresetRepresentation fp= new FilterPresetRepresentation(
+                getString(R.string.filtershow_preset_title) + index, index, index);
+        fp.setSerializationName("Custom");
+        fp.setUri(selImg);
+        return fp;
+    }
+
+    public FilterRepresentation getCurrentPresentation() {
+        ImagePreset preset = MasterImage.getImage().getPreset();
+        return preset.getLastRepresentation();
     }
 
     private class LoadHighresBitmapTask extends AsyncTask<Void, Void, Boolean> {
@@ -1582,6 +1824,9 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
         protected Boolean doInBackground(Uri... params) {
             boolean result = false;
             Bitmap src = ImageLoader.loadBitmap(FilterShowActivity.this, params[0], null);
+            if(src == null) {
+                return false;
+            }
             FaceDetect fDetect = new FaceDetect();
             fDetect.initialize();
             FaceInfo[] faceInfos = fDetect.dectectFeatures(src);
@@ -1911,6 +2156,7 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
                 return true;
             }*/
         case R.id.resetHistoryButton: {
+            clearWaterMark();
             resetHistory();
             return true;
         }
@@ -1947,7 +2193,7 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
             mPresetDialog = new PresetManagementDialog();
             mPresetDialog.show(getSupportFragmentManager(), "NoticeDialogFragment");
         } else {
-            onFilterGeneratorLaunched(true);
+            onMediaPickerStarted();
         }
     }
 
@@ -1994,11 +2240,9 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
             mCategoryLooksAdapter.add(new Action(this, Action.SPACER));
         } */
         mUserPresetsAdapter.clear();
-
         if (presets.size() > 0) {
             mCategoryLooksAdapter.add(new Action(this, Action.ADD_ACTION));
         }
-
         for (int i = 0; i < presets.size(); i++) {
             FilterUserPresetRepresentation representation = presets.get(i);
             mCategoryLooksAdapter.add(
@@ -2110,8 +2354,7 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
     }
 
     @Override
-    public void onConfigurationChanged(Configuration newConfig)
-    {
+    public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
 
         setDefaultValues();
@@ -2141,6 +2384,12 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
         //fillCategories();
         //loadMainPanel();
 
+        if (isWaterMarked()) {
+            DisplayMetrics dm = getResources().getDisplayMetrics();
+            RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(dm.widthPixels,
+                    dm.heightPixels);
+            rlImageContainer.updateViewLayout(mWaterMarkView, params);
+        }
         if (mCurrentMenu != null) {
             mCurrentMenu.dismiss();
             mCurrentMenu = null;
@@ -2317,25 +2566,6 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
                     EditorTruePortraitFusion editor = (EditorTruePortraitFusion)mCurrentEditor;
                     editor.setUnderlayImageUri(underlayImageUri);
                 }
-            } else if (requestCode == SELECT_FILTER ) {
-                Uri FilterImageUri = data.getData();
-                mFilterPresetSource = new FilterPresetSource(this);
-                int id = nameFilter(mFilterPresetSource, tempFilterArray);
-                FilterPresetRepresentation fp= new FilterPresetRepresentation(
-                        getString(R.string.filtershow_preset_title)+id, id, id);
-                fp.setSerializationName("Custom");
-                fp.setUri(FilterImageUri);
-                ImagePreset preset = new ImagePreset();
-                preset.addFilter(fp);
-                SaveOption sp= new SaveOption();
-                sp._id = id;
-                sp.name = "Custom"+id;
-                sp.Uri = FilterImageUri.toString();
-                tempFilterArray.add(sp);
-                FiltersManager.getManager().addRepresentation(fp);
-                mCategoryLooksAdapter.add(new Action(this, fp
-                        , Action.FULL_VIEW,true));
-
             }
         }
     }
@@ -2417,8 +2647,13 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
             String albumName = LocalAlbum.getLocalizedName(getResources(), bucketId, null);
             mReleaseDualCamOnDestory = false;
             showSavingProgress(albumName);
-            mImageShow.saveImage(this, null);
-            if ( tempFilterArray.size() != 0) {
+            if (mWaterMarkView == null) {
+                mImageShow.saveImage(this, null);
+            } else {
+                mSaveWaterMark.saveImage(this, mMasterImage.getHighresImage(),
+                        mSelectedImageUri, handler);
+            }
+            if (tempFilterArray.size() != 0) {
                 completeSaveFilters(mFilterPresetSource, tempFilterArray);
             }
         } else {
