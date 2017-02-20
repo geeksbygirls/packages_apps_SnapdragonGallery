@@ -1512,10 +1512,12 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
         if (mWaterMarkView != null) {
             rlImageContainer.removeView(mWaterMarkView);
             hasWaterMark = false;
+            watermarkRepresentation.reset();
         }
         RelativeLayout.LayoutParams params =
                 new RelativeLayout.LayoutParams(mImageShow.getImageShowWidth(),
                         mImageShow.getImageShowHeight());
+        params.setMargins(mImageShow.getShadowMargin(), mImageShow.getShadowMargin(), 0, 0);
         String textHint;
         switch (watermarkRepresentation.getMarkType()) {
             case 0:
@@ -1534,6 +1536,7 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
         mSaveWaterMark.useRepresentation(representation);
         imgComparison.bringToFront();
         mSaveWaterMark.getExifData(this, mSelectedImageUri);
+        mWaterMarkView.mTouchable = true;
         hasWaterMark = true;
     }
 
@@ -1543,6 +1546,11 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
             mWaterMarkView = null;
             hasWaterMark = false;
         }
+    }
+
+    public void disableTouchEvent() {
+        if (mWaterMarkView == null) return;
+        mWaterMarkView.mTouchable = false;
     }
 
     public boolean isWaterMarked() {
@@ -1614,6 +1622,7 @@ DialogInterface.OnDismissListener, PopupMenu.OnDismissListener{
     }
 
     public void onMediaPickerStarted() {
+        mPresetDialog = null;
         toggleComparisonButtonVisibility();
         ActionBar actionBar = getActionBar();
         actionBar.hide();
