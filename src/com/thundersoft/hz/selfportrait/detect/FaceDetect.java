@@ -25,15 +25,21 @@ public class FaceDetect {
     private static final String TAG = "FaceDetect";
 
     private long mHandle = 0;
+    private static boolean mLibLoaded;
+    private static FaceDetect mInstance;
 
     static {
         try {
             System.loadLibrary("ts_detected_face_jni");
+            mLibLoaded = true;
         } catch (UnsatisfiedLinkError e) {
             e.printStackTrace();
+            mLibLoaded = false;
             Log.e(TAG, "ts_detected_face_jni library not found!");
         }
     }
+
+    private FaceDetect() {}
 
     /**
      * initialize method,MUST called at first time.
@@ -45,6 +51,16 @@ public class FaceDetect {
             e.printStackTrace();
             Log.e(TAG, "could not link native handle for ts_detected_face_jni library!");
         }
+    }
+
+    public static FaceDetect getInstance() {
+        if (mInstance == null)
+            mInstance = new FaceDetect();
+        return mInstance;
+    }
+
+    public boolean isLibLoaded() {
+        return mLibLoaded;
     }
 
     /**
