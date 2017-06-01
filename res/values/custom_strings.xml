@@ -32,4 +32,8 @@
     <string name="video_one_title">Video1</string>
     <string name="video_two_title">Video2</string>
 
+    <string name="scrolling_wall_dialog_text">Do you want to crop the wallpaper to the display size\u003f</string>
+    <string name="scrolling_wall_dialog_title">Crop wallpaper</string>
+    <string name="scrolling_wall_yes">No</string>
+    <string name="scrolling_wall_no">Yes</string>
 </resources>
