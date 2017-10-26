@@ -15,7 +15,8 @@
 -->
 
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:custom="http://schemas.android.com/apk/res/org.codeaurora.gallery">
+        xmlns:custom="http://schemas.android.com/apk/res/org.codeaurora.gallery"
+        xmlns:settings="http://schemas.android.com/apk/res/com.android.gallery3d">
 
     <PreferenceCategory android:title="@string/slideshow_settings" >
         <CheckBoxPreference
